@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+{% extends "base.html" %}
+
+{% block bodyblock %}
+
+
+    {% if image_uri is not None %}
+        {% if prediction is not None %}
+        <div class="row">
+            <div class="col">
+            <div id="imagediv">
+                <img src="{{ image_uri }}" id="upimage" class="rounded float-left" alt="Uploaded image">
+            </div>
+            </div>
+
+            <div class="col">
+            <h1>{{ predlabel }}</h1>
+            
+            <div id="chartcontainer">
+            <canvas id="chart1"></canvas>
+
+            <script>
+            var xValues = ["neutral", "happiness", "surprise", "sadness", "anger", "disgust", "fear", "contempt", "unknown"];
+            var yValues = {{ prediction }};
+            var alpha = {{ alphavar }};
+            var barColorList = [];
+            console.log(yValues);
+            console.log(alpha[0]);
+            // get the bar colors
+            for(var i=0; i < yValues.length; i++){
+                if(yValues[i] < 0){
+                    var str_a = "rgba(255,0,0,";
+                }else{
+                    var str_a = "rgba(0,255,0,";
+                }
+                var str_b = String(alpha[i]);
+                var color = str_a + str_b + ")";
+                barColorList.push(color);
+            } 
+            
+            console.log(barColorList);
+            var barColors = barColorList;
+            
+            new Chart("chart1", {
+                type: "bar",
+                data: {
+                labels: xValues,
+                datasets: [{
+                    backgroundColor: barColors,
+                    data: yValues
+                }]
+                },
+                options: {
+                // indexAxis: 'y',
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: "Predicted Values"
+                    },
+                    legend: {display: false},
+                },
+                scales: {
+                    y: {
+                        grid: {display: false},
+                    },
+                    x: {
+                        grid: {display: false},
+                    },
+                },
+                }
+            });
+            </script>
+            </div>
+        {% else %}
+            <div class="alert alert-danger" role="alert">
+                Prediction error. No label predicted.
+            </div>
+        {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" style="margin-top: 50px; margin-bottom: 30px;">
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit" id="btnUpload" class="btn btn-warning">Predict</button>
+    </form>
+{% endblock %}
