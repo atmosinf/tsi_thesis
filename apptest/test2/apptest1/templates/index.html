@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.js"></script>
+    <title>Document</title>
+</head>
+<body>
+    <h1>Hello. this is index.html</h1>
+    <h1>Image Classification App</h1>
+
+    <form method="post" enctype="multipart/form-data" style="margin-top: 50px; margin-bottom: 30px;">
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit" id="btnUpload" class="btn btn-primary">Upload</button>
+    </form>
+
+    {% if image_uri is not None %}
+        {% if prediction is not None %}
+            <div class="alert alert-primary" role="alert">
+                Predicted label: <b>{{ prediction }}</b>
+            </div>
+        {% else %}
+            <div class="alert alert-danger" role="alert">
+                Prediction error. No label predicted.
+            </div>
+        {% endif %}
+
+        <img src="{{ image_uri }}" class="img-fluid" alt="Uploaded image"
+            style="max-width: min(500px, 100%); height: auto; margin-top: 30px;">
+
+        
+        <h1>{{ predlabel }}</h1>
+
+        <canvas id="myChart" style="width:100%;max-width:600px;height: auto;"></canvas>
+
+        <script>
+        var xValues = ["neutral", "happiness", "surprise", "sadness", "anger", "disgust", "fear", "contempt", "unknown"];
+        var yValues = {{ prediction }};
+        var barColors = [
+            "rgba(255,0,0,1)",
+            "rgba(255,0,0,1)",
+            "rgba(255,0,0,1)",
+            "rgba(255,0,0,1)",
+            "rgba(255,0,0,1)",
+            "rgba(255,0,0,1)",
+            "rgba(255,0,0,1)",
+            "rgba(255,0,0,1)",
+            "rgba(255,0,0,1)"
+        ];
+        
+        new Chart("myChart", {
+            type: "bar",
+            data: {
+            labels: xValues,
+            datasets: [{
+                backgroundColor: barColors,
+                data: yValues
+            }]
+            },
+            options: {
+            legend: {display: false},
+            scales: {
+                yAxes: [{
+                ticks: {
+                    beginAtZero: true
+                }
+                },],
+                y: {
+                    grid: {display: false},
+                },
+                x: {
+                    grid: {display: false},
+                },
+            },
+            }
+        });
+        </script>
+
+    {% endif %}
+</body>
+</html>
