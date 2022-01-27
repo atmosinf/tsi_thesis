@@ -1,0 +1,26 @@
+.row {
+    height: 500px;
+}
+
+#upimage {
+    width: 100%;
+    height: 100%; 
+    /* margin: 10% 10% 10% 10%; */
+    object-fit: contain;
+    display: block;
+    position: absolute;
+    top: 50%;
+    transform: translate(0, -50%)
+}
+
+#imagediv {
+    height: 100%;
+    vertical-align: middle;
+    position: relative;
+    background-color: rgb(219, 228, 236);
+}
+
+#chartcontainer {
+    height: 500px;
+}
+
