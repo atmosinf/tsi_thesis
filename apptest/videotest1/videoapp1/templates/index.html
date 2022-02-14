@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+{% extends "base.html" %}
+
+{% block bodyblock %}
+
+<h1>index page</h1>
+ 
+<style>
+#container {
+	margin: 0px auto;
+	width: 500px;
+	height: 375px;
+	border: 10px #333 solid;
+}
+#videoElement {
+	width: 500px;
+	height: 375px;
+	background-color: #666;
+}
+</style>
+</head>
+ 
+<body>
+<div id="container">
+	<video autoplay="true" id="videoElement">
+	
+	</video>
+</div>
+<script>
+
+const constraints = { video: true };
+
+navigator.mediaDevices
+
+    .getUserMedia(constraints)
+
+    .then(mediaStream => {
+
+        // use MediaStream Recording API
+        const recorder = new MediaRecorder(stream);
+
+        // fires every one second and passes an BlobEvent
+        recorder.ondataavailable = event => {
+
+            // get the Blob from the event
+            const blob = event.data;
+
+            // and send that blob to the server...
+        };
+
+        // make data available event fire every one second
+        recorder.start(1000);
+    });
+
+</script>
+
+
+{% endblock %}
