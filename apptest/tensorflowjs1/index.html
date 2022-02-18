@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.0.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.js"></script>
+    <link rel="stylesheet" href="stylesheet.css">
+</head>
+<body>
+    <h2>original</h2>
+    <img id="img1" src="surprise.jpg" alt="">
+    <h2>grayscale, resized</h2>
+    <canvas id="canvas1"></canvas>
+
+    <h3>prediction:</h3>
+    <h3 id="predlabel"></h3>
+    <div id="chartcontainer">
+        <canvas id="chart1"></canvas>
+    </div>
+
+    <script>
+        const labels = ['']
+
+        tf.ready().then(() => {
+            const modelpath = 'tfjsmodel/model.json';
+            tf.tidy(() => { 
+                    tf.loadGraphModel(modelpath).then((model) => {
+                    const img1 = document.querySelector('#img1');
+                    const canvas1 = document.querySelector('#canvas1');
+                    const imgtensor = tf.browser.fromPixels(img1);
+                    console.log(imgtensor.shape);
+                    
+                    const gray = convert_to_grayscale(imgtensor);
+
+                    const transformed = tf.image.resizeNearestNeighbor(gray, [48,48], true)
+                                                .div(255)
+                                                .reshape([1,1,48,48]);
+
+                    // gray3d is not used in the prediction. it is just used as an output to the canvas
+                    const gray3d = tf.image.resizeNearestNeighbor(gray, [48,48], true)
+                                                .div(255)
+                    console.log(gray3d);
+
+                    tf.browser.toPixels(gray3d, canvas1);
+
+                    const pred = model.predict(transformed);
+                    pred.print();
+                    const prediction = pred.dataSync();       
+                    create_chart(prediction);
+
+                });
+            });
+        });
+        
+        function convert_to_grayscale(image){
+            // the scalars needed for conversion of each channel
+            // per the formula: gray = 0.2989 * R + 0.5870 * G + 0.1140 * B
+            rFactor = tf.scalar(0.2989);
+            gFactor = tf.scalar(0.5870);
+            bFactor = tf.scalar(0.1140);
+
+            // separate out each channel. imgtensor.shape[0] and imgtensor.shape[1] will give you
+            // the correct dimensions regardless of image size
+            r = image.slice([0,0,0], [image.shape[0], image.shape[1], 1]);
+            g = image.slice([0,0,1], [image.shape[0], image.shape[1], 1]);
+            b = image.slice([0,0,2], [image.shape[0], image.shape[1], 1]);
+
+            // add all the tensors together, as they should all be the same dimensions.
+            gray = r.mul(rFactor).add(g.mul(gFactor)).add(b.mul(bFactor));
+
+            return gray;
+        }
+
+        function create_chart(prediction){
+            var xValues = ["neutral", "happiness", "surprise", "sadness", "anger", "disgust", "fear", "contempt", "unknown"];
+            var yValues = prediction;
+            console.log(yValues);
+            // var yValues = [0.2, 0.3, 1.9, 0.3, 0.6, 0.6, -1.4, -0.2, 0.4];
+            // var alpha = {{ alphavar }};
+            var alpha = [1,1,1,1,1,1,1,1,1];
+            var barColorList = [];
+            console.log(yValues);
+            console.log(alpha[0]);
+
+            const predlabel = document.querySelector('#predlabel');
+
+            console.log(tf.argMax(yValues, 0));
+            predlabel.innerHTML = xValues[argMax(prediction)]
+
+            // get the bar colors
+            for(var i=0; i < yValues.length; i++){
+                if(yValues[i] < 0){
+                    var str_a = "rgba(255,0,0,";
+                }else{
+                    var str_a = "rgba(0,255,0,";
+                }
+                var str_b = String(alpha[i]);
+                var color = str_a + str_b + ")";
+                barColorList.push(color);
+            } 
+            
+            console.log(barColorList);
+            var barColors = barColorList;
+            
+            new Chart("chart1", {
+                type: "bar",
+                data: {
+                labels: xValues,
+                datasets: [{
+                    backgroundColor: barColors,
+                    data: yValues
+                }]
+                },
+                options: {
+                // indexAxis: 'y',
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: "Predicted Values"
+                    },
+                    legend: {display: false},
+                },
+                scales: {
+                    y: {
+                        grid: {display: false},
+                    },
+                    x: {
+                        grid: {display: false},
+                    },
+                },
+                }
+            });
+        }
+
+        function argMax(arr) {
+            if (arr.length === 0) {
+                return -1;
+            }
+
+            var max = arr[0];
+            var maxIndex = 0;
+
+            for (var i = 1; i < arr.length; i++) {
+                if (arr[i] > max) {
+                    maxIndex = i;
+                    max = arr[i];
+                }
+            }
+
+            return maxIndex;
+        }
+
+    </script>
+</body>
+</html>
