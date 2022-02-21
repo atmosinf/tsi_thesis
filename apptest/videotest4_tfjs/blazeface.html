@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Face Detection</title>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.0.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
+  </head>
+  <body>
+    <h1>Face Detection</h1>
+    <video id="video" autoplay style="display: none"></video>
+    <canvas id="canvas" width="600px" height="400px"></canvas>
+    <canvas id="canvas2" width="600px" height="400px"></canvas>
+  </body>
+
+  <script>
+        let video = document.getElementById("video");
+        let model;
+        // declare a canvas variable and get its context
+        let canvas = document.getElementById("canvas");
+        let ctx = canvas.getContext("2d");
+
+        let canvas2 = document.querySelector('#canvas2')
+
+        const setupCamera = () => {
+        navigator.mediaDevices
+            .getUserMedia({
+            video: { width: 600, height: 400 },
+            audio: false,
+            })
+            .then((stream) => {
+            video.srcObject = stream;
+            });
+        };
+
+        async function detectFaces(){
+        tf.engine().startScope()
+        const prediction = await model.estimateFaces(video, false);
+
+        // console.log(prediction);
+
+        // draw the video first
+        ctx.drawImage(video, 0, 0, 600, 400);
+
+        prediction.forEach((pred) => {
+            
+            // draw the rectangle enclosing the face
+            ctx.beginPath();
+            ctx.lineWidth = "4";
+            ctx.strokeStyle = "blue";
+            // the last two arguments are width and height
+            // since blazeface returned only the coordinates, 
+            // we can find the width and height by subtracting them.
+            ctx.rect(
+            pred.topLeft[0],
+            pred.topLeft[1],
+            pred.bottomRight[0] - pred.topLeft[0],
+            pred.bottomRight[1] - pred.topLeft[1]
+            );
+            
+
+            console.log(pred)
+            
+            // drawing small rectangles for the face landmarks
+            ctx.fillStyle = "red";
+            pred.landmarks.forEach((landmark) => {
+            ctx.fillRect(landmark[0], landmark[1], 5, 5);
+            });            
+
+            var imgtensor = tf.browser.fromPixels(video);
+            // const faceTensor = imgtensor.slice([pred.topLeft[0], pred.topLeft[1]], [pred.bottomRight[0] - pred.topLeft[0], pred.bottomRight[1] - pred.topLeft[1]]);
+            // const faceTensor = 
+            // tf.browser.toPixels(imgtensor, canvas2).then(() => {
+            // imgtensor.dispose();
+
+            console.log('boxes', pred.topLeft[0], pred.topLeft[1], pred.bottomRight[0], pred.bottomRight[1])
+            
+            var lx = parseInt(pred.topLeft[1])
+            var ly = parseInt(pred.topLeft[0])
+            var bx = parseInt(pred.bottomRight[1])
+            var by = parseInt(pred.bottomRight[0])
+            
+
+            console.log(imgtensor.shape[0])
+            console.log(imgtensor.shape[1])
+            
+            if(lx < 0){
+              lx = 0
+            }else if(lx > imgtensor.shape[0]){
+              lx = imgtensor.shape[0]
+            }
+
+            if(by < 0){
+              ly = 0
+            }else if(by > imgtensor.shape[1]){
+              by = imgtensor.shape[1]
+            }
+
+            var sw = parseInt(bx - lx)
+            var sh = parseInt(by - ly)
+
+
+            // const lx = 100
+            // const ly = 50
+            // const bx = 200
+            // const by = 100
+            // const sw = bx - lx
+            // const sh = by - ly
+
+            console.log(lx,ly, bx, by, sw, sh)
+            
+            const sliced =  tf.slice(imgtensor, [lx, ly, 0], [sw, sh, 3]);
+
+            
+            const output = sliced
+            
+            // imgtensor = tf.expandDims(imgtensor, 0)
+            // const cropBox = [[0.15, 0.15, 0.85, 0.85]]; // top,left,bottom,right in range 0..1 (not in pixel range)
+            // console.log('norm', )
+            // console.log('boxes', pred.topLeft[0], pred.topLeft[1], pred.bottomRight[0], pred.bottomRight[1])
+            // const cropBox = [[pred.topLeft[0]/400, pred.topLeft[1]/600, pred.bottomRight[0]/400, pred.bottomRight[1]/600]]; // top,left,bottom,right in range 0..1 (not in pixel range)
+            // console.log(cropBox)
+            // const outputSize = [200, 200]; // how large we want output to be
+            // const resize = tf.image.cropAndResize(imgtensor, cropBox, [0], outputSize);
+            // console.log(resize)
+            // const output = tf.squeeze(resize, [0]).div(255)
+
+
+
+            // // const { topLeft, bottomRight } = face;
+            //     // Boxes in cropAndResize require to be normalized
+            //     const normTopLeft = pred.topLeft / imgtensor.shape.slice(-3, -2);
+            //     const normBottomRight = pred.bottomRight / imgtensor.shape.slice(-3, -2);
+            //     const width = Math.floor(
+            //         pred.bottomRight[0] -
+            //             pred.topLeft[0] * 200
+            //     );
+            //     const height = Math.floor(
+            //         pred.bottomRight[1] -
+            //             pred.topLeft[1] * 200
+            //     );
+            //     const boxes = tf
+            //         .concat([
+            //             normTopLeft,
+            //             normBottomRight
+            //         ])
+            //         .reshape([-1, 4]);
+            //     const crop = tf.image.cropAndResize(
+            //         imgtensor.reshape([1, 224, 224, 3]),
+            //         boxes,
+            //         [0],
+            //         [height, width]
+            //     );
+          
+            console.log(output.shape)
+            tf.browser.toPixels(output, canvas2)
+            ctx.stroke();
+            tf.engine().endScope()
+
+        })
+
+      
+     
+     
+        
+
+
+        };
+
+        setupCamera();
+        video.addEventListener("loadeddata", async () => {
+        model = await blazeface.load();
+        const modelvgg = await loadModel()
+        // call detect faces every 100 milliseconds or 10 times every second
+        setInterval(detectFaces, 100);
+        // detectFaces()
+        });
+
+        async function loadModel() {
+        await tf.ready()
+        const modelPath =
+          'tfjsmodel/model.json'
+
+        return await tf.loadGraphModel(modelPath)
+      }
+
+      
+  </script>
+</html>
