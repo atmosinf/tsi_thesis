@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.0.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
+    <link rel="stylesheet" href="stylesheet.css">
+</head>
+<body>
+    <h2>original</h2>
+    <video id="video" autoplay style="display: none"></video>
+    <canvas id="canvas" width="600px" height="400px"></canvas>
+    <h3>input</h3>
+    <canvas id="canvas2" width="600px" height="400px"></canvas>
+    <h2>prediction:</h2>
+    <h2 id="predlabel"></h2>
+    <div id="chartcontainer">
+        <canvas id="chart1"></canvas>
+    </div>
+
+    <script>
+        let canvas = document.getElementById("canvas");
+        let ctx = canvas.getContext("2d");
+        let canvas2 = document.querySelector('#canvas2')
+
+        var facecrop = 0
+
+
+
+async function dothat(){
+        try{
+            const mysteryVideo = document.getElementById('video')
+            const camDetails = await setupWebcam(mysteryVideo)
+            const model = await loadModel()
+            const blazefacemodel = await loadBlazeface()
+            var mychart = create_chart();
+            // const blazefacemodel = []
+            // for(let i=0; i < 50; i++){
+                performDetections(model, blazefacemodel, mysteryVideo, mychart)
+            // }
+        } catch (e) {
+            console.error(e)
+        }  
+        
+        }
+
+        async function setupWebcam(videoRef) {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            const webcamStream = await navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: {
+                facingMode: 'user',
+                },
+            })
+
+            if ('srcObject' in videoRef) {
+                videoRef.srcObject = webcamStream
+            } else {
+                videoRef.src = window.URL.createObjectURL(webcamStream)
+            }
+            }
+        }
+
+        dothat()
+
+        async function loadModel() {
+        await tf.ready()
+        const modelPath =
+          'tfjsmodel/model.json'
+
+        return await tf.loadGraphModel(modelPath)
+      }
+
+      async function loadBlazeface(){
+        //   await tf.ready()
+        //   const modelPath = 'https://tfhub.dev/tensorflow/tfjs-model/blazeface/1/default/1'
+        // //   const modelPath = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface'
+
+        //   return await tf.loadGraphModel(modelPath, {fromTFHub : true})
+
+        return await blazeface.load()
+        
+      }
+
+      async function performDetections(model, blazefacemodel, videoRef, mychart) {
+        tf.engine().startScope()
+        const faceoutput = await findFace(blazefacemodel, videoRef)
+        // const imgtensor = tf.browser.fromPixels(videoRef);
+        // console.log(imgtensor.shape);
+        console.log('faceoutput', faceoutput)
+        const gray = convert_to_grayscale(faceoutput);
+
+        const transformed = tf.image.resizeNearestNeighbor(gray, [48,48], true)
+                                    .div(255)
+                                    .reshape([1,1,48,48]);
+        
+        const pred = model.predict(transformed);
+        const xValues = ["neutral", "happiness", "surprise", "sadness", "anger", "disgust", "fear", "contempt", "unknown"];
+        const predlabelp = xValues[argMax(pred)]
+
+        const prediction = pred.dataSync()       
+        await update_chart(prediction, mychart);
+
+        tf.dispose([gray, transformed, pred, prediction])
+        tf.engine().endScope()
+
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                performDetections(model, blazefacemodel, videoRef, mychart)
+            }, 100)
+        })
+
+
+      }
+
+      async function findFace(model, video){
+
+        //   model.then((res) => {
+        //     const prediction = res.estimateFaces(video);
+        //     console.log(prediction)
+        //   })
+        // const frame = tf.browser.fromPixels(video)
+        // const resized = tf.image.resizeNearestNeighbor(frame, [128,128], true)
+        // const readyfied = tf.expandDims(resized, 0)
+        // const readyfiedfloat = tf.cast(readyfied, 'float32')
+        // const prediction = await model.execute(readyfiedfloat);
+        
+        // console.log('blazeoutput', prediction)
+
+        // console.log('prediction0', prediction.topLeft[0])
+
+        const prediction = await model.estimateFaces(video)
+        // console.log('abc', blazeoutput)
+        
+        
+        
+
+
+        // console.log(model);
+
+        // draw the video first
+        // ctx.setTransform(-1,0,0,1,canvas.width,0);
+
+        ctx.drawImage(video, 0, 0, 600, 400);
+
+        prediction.forEach((pred) => {
+            
+            // // draw the rectangle enclosing the face
+            ctx.beginPath();
+            ctx.lineWidth = "4";
+            ctx.strokeStyle = "white";
+            // the last two arguments are width and height
+            // since blazeface returned only the coordinates, 
+            // we can find the width and height by subtracting them.
+            ctx.rect(
+            pred.topLeft[0],
+            pred.topLeft[1],
+            pred.bottomRight[0] - pred.topLeft[0],
+            pred.bottomRight[1] - pred.topLeft[1]
+            );
+            
+
+            console.log(pred)
+            
+            // drawing small rectangles for the face landmarks
+            ctx.fillStyle = "red";
+            pred.landmarks.forEach((landmark) => {
+            ctx.fillRect(landmark[0], landmark[1], 5, 5);
+            });            
+
+            var imgtensor = tf.browser.fromPixels(video);
+            // const faceTensor = imgtensor.slice([pred.topLeft[0], pred.topLeft[1]], [pred.bottomRight[0] - pred.topLeft[0], pred.bottomRight[1] - pred.topLeft[1]]);
+            // const faceTensor = 
+            // tf.browser.toPixels(imgtensor, canvas2).then(() => {
+            // imgtensor.dispose();
+
+            console.log('boxes', pred.topLeft[0], pred.topLeft[1], pred.bottomRight[0], pred.bottomRight[1])
+            
+            var lx = parseInt(pred.topLeft[1])
+            var ly = parseInt(pred.topLeft[0])
+            var bx = parseInt(pred.bottomRight[1])
+            var by = parseInt(pred.bottomRight[0])
+            
+
+            console.log(imgtensor.shape[0])
+            console.log(imgtensor.shape[1])
+            
+            if(lx < 0){
+            lx = 0
+            }else if(lx > imgtensor.shape[0]){
+            lx = imgtensor.shape[0]
+            }
+
+            if(by < 0){
+            ly = 0
+            }else if(by > imgtensor.shape[1]){
+            by = imgtensor.shape[1]
+            }
+
+            var sw = parseInt(bx - lx)
+            var sh = parseInt(by - ly)
+
+
+            // const lx = 100
+            // const ly = 50
+            // const bx = 200
+            // const by = 100
+            // const sw = bx - lx
+            // const sh = by - ly
+
+            console.log(lx,ly, bx, by, sw, sh)
+            
+            facecrop =  tf.slice(imgtensor, [lx, ly, 0], [sw, sh, 3]);
+
+            tf.browser.toPixels(facecrop, canvas2)
+
+            // console.log(output.type())
+            });
+
+            return await facecrop
+      }
+
+
+        async function update_chart(prediction, mychart){
+            const barColorList = [];
+            const alpha = [1,1,1,1,1,1,1,1,1];
+            // console.log(prediction)
+            // console.log(prediction.length)
+            const min = Math.min(...prediction)
+            const max = Math.max(...prediction)
+            const upper = 1
+            const lower = -1
+
+            for(var i=0; i < prediction.length; i++){
+                if(prediction[i] < 0){
+                    var str_a = "rgba(255,0,0,";
+                }else{
+                    var str_a = "rgba(0,255,0,";
+                }
+                var str_b = String(alpha[i]);
+                var color = str_a + str_b + ")";
+                barColorList.push(color);
+                // prediction[i] = (prediction[i] - mean)
+                // console.log(min, max, prediction[i])
+                prediction[i] = (((prediction[i] - min) / (max - min)) * (upper - lower)) + lower
+            } 
+            // console.log(prediction)
+
+            mychart.data.datasets[0].backgroundColor = barColorList
+            mychart.data.datasets[0].data = prediction
+
+            // mychart.options.plugins.title.text = prediction;
+            mychart.update()
+            
+
+            const labels = ["neutral", "happiness", "surprise", "sadness", "anger", "disgust", "fear", "contempt", "unknown"];
+            const predlabel = document.querySelector('#predlabel');
+            predlabel.innerHTML = labels[argMax(prediction)]
+           
+        }
+
+        function create_chart(){
+            const xValues = ["neutral", "happiness", "surprise", "sadness", "anger", "disgust", "fear", "contempt", "unknown"];
+            const yValues = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+            const alpha = [1,1,1,1,1,1,1,1,1];
+            var barColorList = [];
+            
+            for(var i=0; i < yValues.length; i++){
+                if(yValues[i] < 0){
+                    var str_a = "rgba(255,0,0,";
+                }else{
+                    var str_a = "rgba(0,255,0,";
+                }
+                var str_b = String(alpha[i]);
+                var color = str_a + str_b + ")";
+                barColorList.push(color);
+            } 
+            var barColors = barColorList;
+
+            var mychart = new Chart("chart1", {
+                type: "bar",
+                data: {
+                labels: xValues,
+                datasets: [{
+                    backgroundColor: barColors,
+                    data: yValues,
+                    normalized: true,
+                }]
+                },
+                options: {
+                // indexAxis: 'y',
+                animation: {
+                    duration: 0
+                },
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: "Predicted Values"
+                    },
+                    legend: {display: false},
+                },
+                scales: {
+                    y: {
+                        grid: {display: false},
+                    },
+                    x: {
+                        grid: {display: false},
+                    },
+                },
+                }
+            });
+
+            // console.log('here', mychart)
+
+            return mychart;
+        }
+
+        function convert_to_grayscale(image){
+            // the scalars needed for conversion of each channel
+            // per the formula: gray = 0.2989 * R + 0.5870 * G + 0.1140 * B
+            rFactor = tf.scalar(0.2989);
+            gFactor = tf.scalar(0.5870);
+            bFactor = tf.scalar(0.1140);
+
+            // separate out each channel. imgtensor.shape[0] and imgtensor.shape[1] will give you
+            // the correct dimensions regardless of image size
+            r = image.slice([0,0,0], [image.shape[0], image.shape[1], 1]);
+            g = image.slice([0,0,1], [image.shape[0], image.shape[1], 1]);
+            b = image.slice([0,0,2], [image.shape[0], image.shape[1], 1]);
+
+            // add all the tensors together, as they should all be the same dimensions.
+            gray = r.mul(rFactor).add(g.mul(gFactor)).add(b.mul(bFactor));
+
+            return gray;
+        }
+
+        function argMax(arr) {
+            if (arr.length === 0) {
+                return -1;
+            }
+
+            var max = arr[0];
+            var maxIndex = 0;
+
+            for (var i = 1; i < arr.length; i++) {
+                if (arr[i] > max) {
+                    maxIndex = i;
+                    max = arr[i];
+                }
+            }
+
+            return maxIndex;
+        }
+
+    </script>
+</body>
+</html>
