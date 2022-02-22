@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+{% extends "base.html" %}
+{% load static %}
+
+{% block bodyblock %}
+
+<div class="row">
+    <div class="col">
+        <h2>original</h2>
+        <video id="video" autoplay style="display: none"></video>
+        <canvas id="canvas" width="600px" height="400px"></canvas>
+        <h2>prediction:</h2>
+        <h2 id="predlabel"></h2>
+        <!-- <h3>input</h3> -->
+        <!-- <canvas id="canvas2" width="600px" height="400px"></canvas> -->
+    </div>
+
+    <div class="col">
+        <div id="chartcontainer">
+            <canvas id="chart1"></canvas>
+        </div>
+    </div>
+        
+    </div>
+</div>
+
+<script src="{% static 'js/script.js' %}"></script>
+
+
+{% endblock %}
