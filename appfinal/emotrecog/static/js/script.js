@@ -209,6 +209,8 @@ async function dothat(){
                 backgroundColor: barColorList,
                 data: yValues,
                 normalized: true,
+                barPercentage: 1.0,
+                categoryPercentage: 1.0
             }]
             },
             options: {
@@ -225,13 +227,6 @@ async function dothat(){
                 legend: {display: false},
             },
             scales: {
-                // xAxes: [{
-                //     barPercentage: 1,
-                //     categoryPercentage: 1
-                // }],
-                // y: {
-                //     grid: {display: false},
-                // },
                 x: {
                     grid: {display: false},
                 },
