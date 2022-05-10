@@ -3,8 +3,13 @@
     background-color: white;
 }
 
+#preddiv{
+    text-align: center;
+}
+
 #predlabel {
     color: purple;
+    font-size: 5em;
 }
 
 #upimage {

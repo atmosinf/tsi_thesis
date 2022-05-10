@@ -6,11 +6,10 @@
 
 <div class="row">
     <div class="col">
-        <h2>input</h2>
+        <h2>webcam input</h2>
         <video id="video" autoplay style="display: none"></video>
         <canvas id="canvas" width="600px" height="400px"></canvas>
-        <h2>prediction:</h2>
-        <h2 id="predlabel"></h2>
+        
         <!-- <h3>input</h3> -->
         <!-- <canvas id="canvas2" width="600px" height="400px"></canvas> -->
     </div>
@@ -22,6 +21,9 @@
     </div>
         
     </div>
+</div>
+<div id="preddiv">
+    <h1 id="predlabel"></h2>
 </div>
 
 <script src="{% static 'js/script.js' %}"></script>
